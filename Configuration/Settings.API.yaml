@@ -1,0 +1,5 @@
+Sitegeist:
+  ArtClasses:
+    AzureComputerVisionInterpreter:
+      endpointBaseUri: ''
+      subscriptionKey: ''

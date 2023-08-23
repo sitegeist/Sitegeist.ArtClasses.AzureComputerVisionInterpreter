@@ -1,0 +1,8 @@
+Sitegeist\ArtClasses\Domain\Interpretation\ImageInterpreterInterface:
+  factoryObjectName: 'Sitegeist\ArtClasses\AzureComputerVisionInterpreter\Domain\AzureComputerVisionInterpreterFactory'
+  factoryMethodName: create
+  arguments:
+    1:
+      setting: Sitegeist.ArtClasses.AzureComputerVisionInterpreter.endpointBaseUri
+    2:
+      setting: Sitegeist.ArtClasses.AzureComputerVisionInterpreter.subscriptionKey
