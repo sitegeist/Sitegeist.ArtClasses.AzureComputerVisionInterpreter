@@ -30,15 +30,29 @@ final class AzureComputerVisionInterpreter implements ImageInterpreterInterface
 
     public function interpretImage(Image $image, ?Locale $targetLocale): ImageInterpretation
     {
-        $response = $this->sendRequest($image, $targetLocale);
+        $usedTargetLocale = $targetLocale;
+        $response = $this->sendRequest($image, $usedTargetLocale);
         $message = \json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         if ($response->getStatusCode() === 400 && $message['error']['innererror']['code'] ?? null === 'NotSupportedLanguage') {
-            $response = $this->sendRequest($image, null);
+            $usedTargetLocale = new Locale('en');
+            $response = $this->sendRequest($image, $usedTargetLocale);
             $message = \json_decode((string)$response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         }
 
-        \Neos\Flow\var_dump($message);
-        exit();
+        if ($response->getStatusCode() !== 200) {
+            // @todo: log and return empty interpretation
+            throw new \RuntimeException(
+                'Could not interpret image: "'
+                    . ($message['error']['innererror']['message'] ?? $message['error']['message'] ?? 'unknown error') . '"',
+                1693214374
+            );
+        }
+
+        // @todo evaluate message.captionResult.confidence
+        return new ImageInterpretation(
+            $usedTargetLocale,
+            $message['captionResult']['text'] ?? ''
+        );
     }
 
     private function sendRequest(Image $image, ?Locale $targetLocale): Response
