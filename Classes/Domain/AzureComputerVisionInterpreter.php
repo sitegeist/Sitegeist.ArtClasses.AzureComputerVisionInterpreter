@@ -16,6 +16,9 @@ use Neos\Media\Domain\Model\Image;
 use Psr\Http\Message\UriInterface;
 use Sitegeist\ArtClasses\Domain\Interpretation\ImageInterpreterInterface;
 use Sitegeist\ArtClasses\Domain\Interpretation\ImageInterpretation;
+use Sitegeist\ArtClasses\Domain\Interpretation\InterpretedBoundingPolygon;
+use Sitegeist\ArtClasses\Domain\Interpretation\InterpretedText;
+use Sitegeist\ArtClasses\Domain\Interpretation\InterpretedVertex;
 
 /**
  * An Azure Computer Vision based interpreter
@@ -24,7 +27,8 @@ final class AzureComputerVisionInterpreter implements ImageInterpreterInterface
 {
     public function __construct(
         private readonly UriInterface $endpointBaseUri,
-        private readonly string $subscriptionKey
+        private readonly string $subscriptionKey,
+        private readonly float $minimumScore
     ) {
     }
 
@@ -48,10 +52,76 @@ final class AzureComputerVisionInterpreter implements ImageInterpreterInterface
             );
         }
 
-        // @todo evaluate message.captionResult.confidence
+        $description = null;
+        if ($message['captionResult']['confidence'] > $this->minimumScore) {
+            $description = $message['captionResult']['text'];
+        }
+
+        $texts = [];
+        foreach ($message['readResult']['pages'] as $page) {
+            foreach ($page['lines'] as $line) {
+                $texts[] = new InterpretedText(
+                    $line['content'],
+                    null,
+                    new InterpretedBoundingPolygon(
+                        [
+                            new InterpretedVertex(
+                                (int)$line['boundingBox'][0],
+                                (int)$line['boundingBox'][1]
+                            ),
+                            new InterpretedVertex(
+                                (int)$line['boundingBox'][2],
+                                (int)$line['boundingBox'][3]
+                            ),
+                            new InterpretedVertex(
+                                (int)$line['boundingBox'][4],
+                                (int)$line['boundingBox'][5]
+                            ),
+                            new InterpretedVertex(
+                                (int)$line['boundingBox'][6],
+                                (int)$line['boundingBox'][7]
+                            ),
+                        ],
+                        []
+                    ),
+                );
+            }
+        }
+
         return new ImageInterpretation(
             $usedTargetLocale,
-            $message['captionResult']['text'] ?? ''
+            $description,
+            array_filter(array_map(
+                fn (array $tagResult): ?string => $tagResult['confidence'] > $this->minimumScore ? $tagResult['name'] : null,
+                $message['tagsResult']['values'] ?? []
+            )),
+            [],
+            $texts,
+            [],
+            array_map(
+                fn (array $smartCropResult): InterpretedBoundingPolygon => new InterpretedBoundingPolygon(
+                    [
+                        new InterpretedVertex(
+                            $smartCropResult['boundingBox']['x'],
+                            $smartCropResult['boundingBox']['y']
+                        ),
+                        new InterpretedVertex(
+                            $smartCropResult['boundingBox']['x'],
+                            $smartCropResult['boundingBox']['y'] + $smartCropResult['boundingBox']['h']
+                        ),
+                        new InterpretedVertex(
+                            $smartCropResult['boundingBox']['x'] + $smartCropResult['boundingBox']['w'],
+                            $smartCropResult['boundingBox']['y'] + $smartCropResult['boundingBox']['h']
+                        ),
+                        new InterpretedVertex(
+                            $smartCropResult['boundingBox']['x'] + $smartCropResult['boundingBox']['w'],
+                            $smartCropResult['boundingBox']['y']
+                        ),
+                    ],
+                    [],
+                ),
+                $message['smartCropsResult']['values']
+            )
         );
     }
 
@@ -61,7 +131,7 @@ final class AzureComputerVisionInterpreter implements ImageInterpreterInterface
             ->withPath('computervision/imageanalysis:analyze')
             ->withQuery(http_build_query([
                 'api-version' => '2023-04-01-preview',
-                'features' => 'caption',
+                'features' => 'caption,tags,objects,read,smartCrops',
                 'language' => $targetLocale?->getLanguage() ?: 'en',
                 'gender-neutral-caption' => 'true',
             ]));

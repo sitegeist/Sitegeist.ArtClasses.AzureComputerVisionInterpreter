@@ -19,11 +19,13 @@ final class AzureComputerVisionInterpreterFactory
 {
     public function create(
         string $endpointBaseUri,
-        string $subscriptionKey
+        string $subscriptionKey,
+        float $minimumScore
     ): AzureComputerVisionInterpreter {
         return new AzureComputerVisionInterpreter(
             new Uri($endpointBaseUri),
-            $subscriptionKey
+            $subscriptionKey,
+            $minimumScore
         );
     }
 }

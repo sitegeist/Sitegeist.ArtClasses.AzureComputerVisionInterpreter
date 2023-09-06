@@ -6,3 +6,5 @@ Sitegeist\ArtClasses\Domain\Interpretation\ImageInterpreterInterface:
       setting: Sitegeist.ArtClasses.AzureComputerVisionInterpreter.endpointBaseUri
     2:
       setting: Sitegeist.ArtClasses.AzureComputerVisionInterpreter.subscriptionKey
+    3:
+      setting: Sitegeist.ArtClasses.AzureComputerVisionInterpreter.minimumScore

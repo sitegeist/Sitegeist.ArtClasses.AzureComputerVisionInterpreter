@@ -3,3 +3,4 @@ Sitegeist:
     AzureComputerVisionInterpreter:
       endpointBaseUri: ''
       subscriptionKey: ''
+      minimumScore: 0.9
